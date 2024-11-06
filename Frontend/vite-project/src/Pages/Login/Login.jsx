@@ -1,22 +1,94 @@
-import React from 'react'
-import Navbar from '../../Components/Navbar/Navbar'
-import { Link } from 'react-router-dom'
+import { Alert, Button, Label, Spinner, TextInput } from "flowbite-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Login() {
+export default function SignIn() {
+  const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.identifier || !formData.password) {
+      return dispatch(signInFailure("Please fill all the fields"));
+    }
+    try {
+      
+      setErrorMessage(null)
+      setLoading(false)
+
+      const res = await fetch("http://localhost:5000/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (data.success === false || data.status == 'fail' || data.status == 'error') {
+        setErrorMessage(data.message)
+        setLoading(false)
+      }
+      if (res.ok) {
+        setLoading(false)
+        setErrorMessage(false)
+        const {token} = data.data
+        localStorage.setItem("token", token)
+        navigate("/");
+      }
+    } catch (error) {
+      setLoading(false)
+      setErrorMessage(error.message)
+    }
+  };
   return (
-    <>
-    <Navbar/>
-
-    <div className='flex items-center justify-center'>
-      <div>
-        <form onSubmit={()=>{}}>
-          <h4 className='text-2xl mb-7'>Login</h4>
-          <input type="text" placeholder='Email' className='input-box' />
-          <button type='submit' className='btn-primary'>Login</button>
-          <p className='text-sm text-center mt-4'>Not Registered yet? {""} <Link to="/register" className=''>Create an Account</Link></p>
+    <div className="min-h-screen mt-20">
+      <div className="flex p-3 max-w-xl mx-auto flex-col md:items-center gap-5">
+        <form className="flex flex-col gap-4 w-full" onSubmit={handleSubmit}>
+          <div>
+            <Label value="Your email or username" />
+            <TextInput
+              type="text"
+              placeholder="email or username"
+              id="identifier"
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label value="Your password" />
+            <TextInput
+              type="password"
+              placeholder="**********"
+              id="password"
+              onChange={handleChange}
+            />
+          </div>
+          <Button color="dark" type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size="sm" />
+                <span className="pl-3">Loading...</span>
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
         </form>
+        <div className="flex gap-2 text-sm mt-5">
+          <span>Don't have an account?</span>
+          <Link to="/register" className="text-blue-500">
+            Sign Up
+          </Link>
+        </div>
+        {errorMessage && (
+          <Alert className="mt-5" color="failure">
+            {errorMessage}
+          </Alert>
+        )}
       </div>
     </div>
-    </>
-  )
+  );
 }
